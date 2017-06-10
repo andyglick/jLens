@@ -1,5 +1,5 @@
 # Maven
-target
+target/
 # ctags/etags
 TAGS
 tags.sh
@@ -13,7 +13,16 @@ ID
 # Other
 *.patch
 
+*.log
+
 # Package Files #
 *.jar
 *.war
 *.ear
+
+*.iml
+*.ipr
+*.iws
+.idea/
+
+.DS_Store
