@@ -20,36 +20,36 @@ import cz.cvut.felk.cyber.jlens.*;
 
 @LensProperties
 public class Primitives {
-    private byte f_byte;
-    private short f_short;
-    private int f_int;
-    private long f_long;
-    private float f_float;
-    private double f_double;
-    private boolean f_boolean;
-    private char f_char;
+    private byte fByte;
+    private short fShort;
+    private int fInt;
+    private long fLong;
+    private float fFloat;
+    private double fDouble;
+    private boolean fBoolean;
+    private char fChar;
 
-    public byte getFByte()       { return this.f_byte; }
-    public void setFByte(byte v) { this.f_byte = v; }
+    public byte getFByte()       { return this.fByte; }
+    public void setFByte(byte v) { this.fByte = v; }
 
-    public short getFShort()       { return this.f_short; }
-    public void setFShort(short v) { this.f_short = v; }
+    public short getFShort()       { return this.fShort; }
+    public void setFShort(short v) { this.fShort = v; }
 
-    public int getFInt()       { return this.f_int; }
-    public void setFInt(int v) { this.f_int = v; }
+    public int getFInt()       { return this.fInt; }
+    public void setFInt(int v) { this.fInt = v; }
 
-    public long getFLong()       { return this.f_long; }
-    public void setFLong(long v) { this.f_long = v; }
+    public long getFLong()       { return this.fLong; }
+    public void setFLong(long v) { this.fLong = v; }
 
-    public float getFFloat()       { return this.f_float; }
-    public void setFFloat(float v) { this.f_float = v; }
+    public float getFFloat()       { return this.fFloat; }
+    public void setFFloat(float v) { this.fFloat = v; }
 
-    public double getFDouble()       { return this.f_double; }
-    public void setFDouble(double v) { this.f_double = v; }
+    public double getFDouble()       { return this.fDouble; }
+    public void setFDouble(double v) { this.fDouble = v; }
 
-    public boolean getFBoolean()       { return this.f_boolean; }
-    public void setFBoolean(boolean v) { this.f_boolean = v; }
+    public boolean getFBoolean()       { return this.fBoolean; }
+    public void setFBoolean(boolean v) { this.fBoolean = v; }
 
-    public char getFChar()       { return this.f_char; }
-    public void setFChar(char v) { this.f_char = v; }
+    public char getFChar()       { return this.fChar; }
+    public void setFChar(char v) { this.fChar = v; }
 }

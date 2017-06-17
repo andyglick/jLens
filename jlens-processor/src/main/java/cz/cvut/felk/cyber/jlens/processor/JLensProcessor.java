@@ -16,25 +16,45 @@
  */
 package cz.cvut.felk.cyber.jlens.processor;
 
+import cz.cvut.felk.cyber.jlens.LensProperties;
+import freemarker.template.Configuration;
+import freemarker.template.SimpleScalar;
+import freemarker.template.Template;
+import freemarker.template.TemplateException;
+import freemarker.template.TemplateHashModel;
+import freemarker.template.TemplateModel;
+import freemarker.template.Version;
+
+import java.io.IOException;
+import java.io.Writer;
 import java.lang.annotation.Annotation;
-import javax.annotation.processing.*;
-import javax.lang.model.element.*;
-import javax.lang.model.type.*;
-import javax.lang.model.util.*;
-import static javax.lang.model.util.Types.*;
-import static javax.lang.model.util.ElementFilter.*;
-import javax.tools.JavaFileObject;
-import javax.tools.Diagnostic.*;
-import java.io.*;
-
 import java.text.SimpleDateFormat;
-import java.util.*;
-import static java.util.Collections.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Set;
 
-import freemarker.template.*;
+import javax.annotation.processing.AbstractProcessor;
+import javax.annotation.processing.Filer;
+import javax.annotation.processing.RoundEnvironment;
+import javax.annotation.processing.SupportedAnnotationTypes;
+import javax.annotation.processing.SupportedOptions;
+import javax.annotation.processing.SupportedSourceVersion;
+import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.AnnotationValue;
+import javax.lang.model.element.Element;
+import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Modifier;
+import javax.lang.model.element.PackageElement;
+import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.Elements;
+import javax.lang.model.util.SimpleElementVisitor6;
+import javax.tools.Diagnostic.Kind;
+import javax.tools.JavaFileObject;
 
-import cz.cvut.felk.cyber.jlens.*;
-
+import static javax.lang.model.util.ElementFilter.methodsIn;
+import static javax.lang.model.util.ElementFilter.typesIn;
 
 /**
  * TODO: Options - class suffix.
@@ -43,108 +63,114 @@ import cz.cvut.felk.cyber.jlens.*;
 @SupportedAnnotationTypes("cz.cvut.felk.cyber.jlens.LensProperties")
 @SupportedOptions({})
 public class JLensProcessor
-    extends AbstractProcessor
+  extends AbstractProcessor
 {
-    //private final org.slf4j.Logger log =
-    //    org.slf4j.LoggerFactory.getLogger(JLensProcessor.class);
+  //private final org.slf4j.Logger log =
+  //    org.slf4j.LoggerFactory.getLogger(JLensProcessor.class);
 
-    public static final String CLASS_SUFFIX = "_L";
+  public static final String CLASS_SUFFIX = "_L";
 
-    protected static final Class<LensProperties> ANNOTATION_CLASS = LensProperties.class;
+  protected static final Class<LensProperties> ANNOTATION_CLASS = LensProperties.class;
 
- 
-    private final Configuration fmc;
 
-    public JLensProcessor()
+  private final Configuration fmc;
+
+  public JLensProcessor()
+  {
+    Version version = new Version("2.3.26");
+    fmc = new Configuration(version);
+    fmc.setClassForTemplateLoading(this.getClass(), "");
+  }
+
+
+  @Override
+  public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv)
+  {
+    if (roundEnv.processingOver())
+      return false;
+    final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+    final String generated = "@javax.annotation.Generated(value=\"" + getClass().getName() + "\",date=\"" + sdf.format(new Date()) + "\")";
+
+    try
     {
-        fmc = new Configuration();
-        fmc.setClassForTemplateLoading(this.getClass(), "");
-    }
+      final Template template = fmc.getTemplate("sgetter.ftl");
 
+      final Elements elms = processingEnv.getElementUtils();
+      final Filer filer = processingEnv.getFiler();
+      for (TypeElement a : annotations)
+        for (TypeElement e : typesIn(roundEnv.getElementsAnnotatedWith(a)))
+        {
+          final PackageElement pkg = elms.getPackageOf(e);
 
-    @Override
-    public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv)
-    {
-        if (roundEnv.processingOver())
-            return false;
-        final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-        final String generated = "@javax.annotation.Generated(value=\"" + getClass().getName() + "\",date=\"" + sdf.format(new Date()) + "\")";
+          final TypeElement parent = parent(e);
+          final String name = e.getSimpleName().toString();
+          final String gsname = name + CLASS_SUFFIX;
 
-        try {
-            final Template template = fmc.getTemplate("sgetter.ftl");
+          processingEnv.getMessager().printMessage(
+            Kind.NOTE, "Generating " + gsname);
 
-            final Elements elms = processingEnv.getElementUtils();
-            final Filer filer = processingEnv.getFiler();
-            for(TypeElement a : annotations)
-                for(TypeElement e : typesIn(roundEnv.getElementsAnnotatedWith(a)))
-                {
-                    final PackageElement pkg = elms.getPackageOf(e);
+          final HashMap<String, ExecutableElement> setters
+            = new HashMap<String, ExecutableElement>();
+          for (ExecutableElement m : methodsIn(e.getEnclosedElements()))
+          {
+            String mname = m.getSimpleName().toString();
+            if (mname.startsWith("set"))
+              setters.put(uncapFirst(mname, 3), m);
+          }
 
-                    final TypeElement parent = parent(e);
-                    final String name = e.getSimpleName().toString();
-                    final String gsname = name + CLASS_SUFFIX;
+          final HashMap<String, ExecutableElement> getters
+            = new HashMap<String, ExecutableElement>();
+          final ArrayList<ExecutableElement> getterMethods
+            = new ArrayList<ExecutableElement>();
+          for (ExecutableElement m : methodsIn(e.getEnclosedElements()))
+          {
+            String mname = m.getSimpleName().toString();
+            if (!m.getParameters().isEmpty())
+              continue;
+            if (m.getModifiers().contains(Modifier.ABSTRACT))
+              continue;
+            if (mname.startsWith("get"))
+              mname = uncapFirst(mname, 3);
+            else if (mname.startsWith("is"))
+              mname = uncapFirst(mname, 2);
+            else
+              continue;
+            getters.put(mname, m);
 
-                    processingEnv.getMessager().printMessage(
-                            Kind.NOTE, "Generating " + gsname );
+            getterMethods.add(m);
+          }
 
-                    final HashMap<String,ExecutableElement> setters
-                        = new HashMap<String,ExecutableElement>();
-                    for(ExecutableElement m : methodsIn(e.getEnclosedElements()))
-                    {
-                        String mname = m.getSimpleName().toString();
-                        if (mname.startsWith("set"))
-                            setters.put(uncapFirst(mname, 3), m);
-                    }
+          JavaFileObject file =
+            filer.createSourceFile(pkg.getQualifiedName() + "." + gsname, e);
 
-                    final HashMap<String,ExecutableElement> getters
-                        = new HashMap<String,ExecutableElement>();
-                    final ArrayList<ExecutableElement> getterMethods
-                        = new ArrayList<ExecutableElement>();
-                    for(ExecutableElement m : methodsIn(e.getEnclosedElements()))
-                    {
-                        String mname = m.getSimpleName().toString();
-                        if (!m.getParameters().isEmpty())
-                            continue;
-                        if (m.getModifiers().contains(Modifier.ABSTRACT))
-                            continue;
-                        if (mname.startsWith("get"))
-                            mname = uncapFirst(mname, 3);
-                        else if (mname.startsWith("is"))
-                            mname = uncapFirst(mname, 2);
-                        else
-                            continue;
-                        getters.put(mname, m);
+          HashMap<String, Object> params = new HashMap<String, Object>();
+          params.put("package", pkg.getQualifiedName());
+          params.put("class", name);
+          if (parent != null)
+            params.put("parentClass", parent.getQualifiedName().toString());
+          params.put("classSuffix", CLASS_SUFFIX);
+          params.put("generated", generated);
+          params.put("e", e);
+          params.put("methods", methodsIn(e.getEnclosedElements()));
+          params.put("getterMethods", getterMethods);
+          params.put("settersMap", setters);
+          params.put("lensClass", new LensAbstractClass());
 
-                        getterMethods.add(m);
-                    }
-
-                    JavaFileObject file =
-                        filer.createSourceFile(pkg.getQualifiedName() + "." + gsname, e);
-
-                    HashMap<String,Object> params = new HashMap<String,Object>();
-                    params.put("package", pkg.getQualifiedName());
-                    params.put("class", name);
-                    if (parent != null)
-                        params.put("parentClass", parent.getQualifiedName().toString());
-                    params.put("classSuffix", CLASS_SUFFIX);
-                    params.put("generated", generated);
-                    params.put("e", e);
-                    params.put("methods", methodsIn(e.getEnclosedElements()));
-                    params.put("getterMethods", getterMethods);
-                    params.put("settersMap", setters);
-                    params.put("lensClass", new LensAbstractClass());
-
-                    final Writer w = file.openWriter();
-                    template.process(params, w);
-                    w.close();
-                }
-        } catch (IOException ex) {
-            throw new RuntimeException(ex);
-        } catch (TemplateException ex) {
-            throw new RuntimeException(ex);
+          final Writer w = file.openWriter();
+          template.process(params, w);
+          w.close();
         }
-        return false;
     }
+    catch (IOException ex)
+    {
+      throw new RuntimeException(ex);
+    }
+    catch (TemplateException ex)
+    {
+      throw new RuntimeException(ex);
+    }
+    return false;
+  }
 
     /*
     protected TypeMirror isSetter(ExecutableElement e)
@@ -157,75 +183,89 @@ public class JLensProcessor
     }
     */
 
-    protected static String uncapFirst(String s, int offset)
+  protected static String uncapFirst(String s, int offset)
+  {
+    if (s.length() <= offset)
+      return s;
+    return Character.toLowerCase(s.charAt(offset)) + s.substring(offset + 1);
+  }
+  
+  @SuppressWarnings("unused")
+  protected static Object getAnnotationValue(Element m, Class<?> clazz)
+  {
+    final String cname = clazz.getName();
+
+    for (AnnotationMirror am : m.getAnnotationMirrors())
     {
-        if (s.length() <= offset)
-            return s;
-        return Character.toLowerCase(s.charAt(offset)) + s.substring(offset + 1);
+      if (am.getAnnotationType().toString().equals(cname))
+      {
+        for (AnnotationValue av : am.getElementValues().values())
+          return av.getValue();
+      }
     }
- 
-    // not used atm
-    protected static Object getAnnotationValue(Element m, Class<?> clazz)
+    return null;
+  }
+
+  protected static boolean hasAnnotation(TypeElement m, Class<?> clazz)
+  {
+    final String cname = clazz.getName();
+    for (AnnotationMirror am : m.getAnnotationMirrors())
+      if (am.getAnnotationType().toString().equals(cname))
+        return true;
+    return false;
+  }
+
+  protected TypeElement parent(TypeElement m)
+  {
+    if (m == null)
+      return null;
+    final TypeMirror tm = m.getSuperclass();
+    final Element e = (tm != null) ? processingEnv.getTypeUtils().asElement(tm) : null;
+    if (e == null)
+      return null;
+    return e.accept(
+      new SimpleElementVisitor6<TypeElement, Void>()
+      {
+        @Override
+        public TypeElement visitType(TypeElement e, Void p)
+        {
+          return e;
+        }
+      }, null);
+  }
+
+  // TODO Caching?
+  protected Element annotated(TypeElement m, Class<? extends Annotation> clazz)
+  {
+    for (; m != null; m = parent(m))
     {
-        final String cname = clazz.getName();
-        for(AnnotationMirror am : m.getAnnotationMirrors())
-        {
-            if (am.getAnnotationType().toString().equals(cname))
-            {
-                for(AnnotationValue av : am.getElementValues().values())
-                    return av.getValue();
-            }
-        }
-        return null;
+      if (hasAnnotation(m, clazz))
+        return m;
+    }
+    return null;
+  }
+
+  public final class LensAbstractClass
+    implements TemplateHashModel
+  {
+    public LensAbstractClass()
+    {
+      super();
     }
 
-    protected static boolean hasAnnotation(TypeElement m, Class<?> clazz) {
-        final String cname = clazz.getName();
-        for(AnnotationMirror am : m.getAnnotationMirrors())
-            if (am.getAnnotationType().toString().equals(cname))
-                return true;
-        return false;
+    @Override
+    public TemplateModel get(String key)
+    {
+      final Element parent =
+        annotated(processingEnv.getElementUtils().getTypeElement(key), ANNOTATION_CLASS);
+      return (parent != null) ? new SimpleScalar(parent.toString())
+        : TemplateModel.NOTHING;
     }
 
-    protected TypeElement parent(TypeElement m) {
-        if (m == null)
-            return null;
-        final TypeMirror tm = m.getSuperclass();
-        final Element e = (tm != null) ? processingEnv.getTypeUtils().asElement(tm) : null;
-        if (e == null)
-            return null;
-        return e.accept(
-                new SimpleElementVisitor6<TypeElement,Void>() {
-                    @Override public TypeElement visitType(TypeElement e, Void p) {
-                        return e;
-                    }
-                }, null );
+    @Override
+    public boolean isEmpty()
+    {
+      return false;
     }
-
-    // TODO Caching?
-    protected Element annotated(TypeElement m, Class<? extends Annotation> clazz) {
-        for(; m != null; m = parent(m)) {
-            if (hasAnnotation(m, clazz))
-                return m;
-        }
-        return null;
-    }
-
-    public final class LensAbstractClass
-            implements TemplateHashModel
-        {
-            public LensAbstractClass() {
-            }
-            @Override
-            public TemplateModel get(String key) {
-                final Element parent =
-                    annotated(processingEnv.getElementUtils().getTypeElement(key), ANNOTATION_CLASS);
-                return (parent != null) ? new SimpleScalar(parent.toString())
-                                        : TemplateModel.NOTHING;
-            }
-            @Override
-            public boolean isEmpty() {
-                return false;
-            }
-        }
+  }
 }

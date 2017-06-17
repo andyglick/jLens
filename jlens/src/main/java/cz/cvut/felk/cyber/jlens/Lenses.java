@@ -16,103 +16,115 @@
  */
 package cz.cvut.felk.cyber.jlens;
 
-import java.util.*;
-
 /**
  * A set of helper classes and methods for creating new lenses from existing
  * ones.
  */
 public final class Lenses
 {
-    private Lenses() {
-        throw new UnsupportedOperationException();
+  private Lenses()
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  /**
+   * Composes two getters (read-only lenses).
+   *
+   * @see Lenses.JoinGetter
+   */
+  public static <U, T, X> Getter<U, X> join(
+    Getter<U, T> first,
+    Getter<? super T, X> second)
+  {
+    if (first == null)
+      throw new NullPointerException("First Getter is null");
+    if (second == null)
+      throw new NullPointerException("Second Getter is null");
+    return new JoinGetter<U, T, X, Getter<? super T, X>>(first, second);
+  }
+
+  /**
+   * Same as {@link join(Getter,Getter)}, but allows <code>null</code> values.
+   * If one of the arguments is <code>null</code>, the result is also <code>null</code>.
+   */
+  public static <U, T, X> Getter<U, X> joinOrNull(
+    Getter<U, T> first,
+    Getter<? super T, X> second)
+  {
+    if ((first == null) || (second == null))
+      return null;
+    return new JoinGetter<U, T, X, Getter<? super T, X>>(first, second);
+  }
+
+  /**
+   * Composes a getter (read-only lens) and another lens.
+   *
+   * @see Lenses.JoinLens
+   */
+  public static <U, T, X> Lens<U, X> join(
+    Getter<U, T> first,
+    final Lens<? super T, X> second)
+  {
+    if (first == null)
+      throw new NullPointerException("First Getter is null");
+    if (second == null)
+      throw new NullPointerException("Second Lens is null");
+    return new JoinLens<U, T, X, Lens<? super T, X>>(first, second);
+  }
+
+  /**
+   * Same as {@link join(Getter,Getter)}, but allows <code>null</code> values.
+   * If one of the arguments is <code>null</code>, the result is also <code>null</code>.
+   */
+  public static <U, T, X> Lens<U, X> joinOrNull(
+    Getter<U, T> first,
+    final Lens<? super T, X> second)
+  {
+    if ((first == null) || (second == null))
+      return null;
+    return new JoinLens<U, T, X, Lens<? super T, X>>(first, second);
+  }
+
+  /**
+   * An implementation of composing two {@link Getter getters}.
+   */
+  public static class JoinGetter<U, T, X, G extends Getter<? super T, X>>
+    extends WrappedGetter<U, X, Getter<U, T>>
+  {
+    protected final G second;
+
+    public JoinGetter(Getter<U, T> first, G second)
+    {
+      super(first, second.fieldClass());
+      this.second = second;
     }
 
-
-    /**
-     * Composes two getters (read-only lenses).
-     * @see Lenses.JoinGetter
-     */
-    public static <U,T,X> Getter<U,X> join(
-            Getter<U,T> first,
-            Getter<? super T,X> second)
+    @Override
+    public X get(U target)
     {
-        if (first == null)
-            throw new NullPointerException("First Getter is null");
-        if (second == null)
-            throw new NullPointerException("Second Getter is null");
-        return new JoinGetter<U,T,X,Getter<? super T,X>>(first, second);
+      return second.get(getter.get(target));
     }
-    /**
-     * Same as {@link join(Getter,Getter)}, but allows <code>null</code> values.
-     * If one of the arguments is <code>null</code>, the result is also <code>null</code>.
-     */
-    public static <U,T,X> Getter<U,X> joinOrNull(
-            Getter<U,T> first,
-            Getter<? super T,X> second)
+  }
+
+  /**
+   * The implementation of composing a {@link Getter getter} and
+   * a {@link Lens lens}.
+   */
+  public static class JoinLens<U, T, X, G extends Lens<? super T, X>>
+    extends JoinGetter<U, T, X, G>
+    implements Lens<U, X>
+  {
+    public JoinLens(Getter<U, T> first, G second)
     {
-        if ((first == null) || (second == null))
-            return null;
-        return new JoinGetter<U,T,X,Getter<? super T,X>>(first, second);
+      super(first, second);
     }
 
-    /**
-     * Composes a getter (read-only lens) and another lens.
-     * @see Lenses.JoinLens
-     */
-    public static <U,T,X> Lens<U,X> join(
-            Getter<U,T> first,
-            final Lens<? super T,X> second)
+    @Override
+    public void set(U target, X value)
     {
-        if (first == null)
-            throw new NullPointerException("First Getter is null");
-        if (second == null)
-            throw new NullPointerException("Second Lens is null");
-        return new JoinLens<U,T,X,Lens<? super T,X>>(first, second);
+      second.set(getter.get(target), value);
     }
-    /**
-     * Same as {@link join(Getter,Getter)}, but allows <code>null</code> values.
-     * If one of the arguments is <code>null</code>, the result is also <code>null</code>.
-     */
-    public static <U,T,X> Lens<U,X> joinOrNull(
-            Getter<U,T> first,
-            final Lens<? super T,X> second)
-    {
-        if ((first == null) || (second == null))
-            return null;
-        return new JoinLens<U,T,X,Lens<? super T,X>>(first, second);
-    }
-
-    /**
-     * An implementation of composing two {@link Getter getters}.
-     */
-    public static class JoinGetter<U,T,X,G extends Getter<? super T,X>>
-            extends WrappedGetter<U,X,Getter<U,T>>
-        {
-            protected final G second;
-            public JoinGetter(Getter<U,T> first, G second) {
-                super(first, second.fieldClass());
-                this.second = second;
-            }
-            @Override public X get(U target) {
-                return second.get(getter.get(target));
-            }
-        };
-    /**
-     * The implementation of composing a {@link Getter getter} and
-     * a {@link Lens lens}.
-     */
-    public static class JoinLens<U,T,X,G extends Lens<? super T,X>>
-            extends JoinGetter<U,T,X,G>
-            implements Lens<U,X>
-        {
-            public JoinLens(Getter<U,T> first, G second) {
-                super(first, second);
-            }
-            @Override public void set(U target, X value) {
-                second.set(getter.get(target), value);
-            }
-        };
+  }
 
 
     /*
@@ -144,114 +156,142 @@ public final class Lenses
     */
 
 
-    /**
-     * Converts a lens into another that operates on a different class.
-     * @see Lenses.Coerce
-     */
-    public static <X,M,T> Lens<M,T> coerce(Class<M> clazz, Lens<X,T> lens) {
-        if (clazz == null)
-            throw new NullPointerException("The class is null");
-        if (lens == null)
-            throw new NullPointerException("The Lens is null");
-        return new Coerce<M,T,X>(clazz, lens);
+  /**
+   * Converts a lens into another that operates on a different class.
+   *
+   * @see Lenses.Coerce
+   */
+  public static <X, M, T> Lens<M, T> coerce(Class<M> clazz, Lens<X, T> lens)
+  {
+    if (clazz == null)
+      throw new NullPointerException("The class is null");
+    if (lens == null)
+      throw new NullPointerException("The Lens is null");
+    return new Coerce<M, T, X>(clazz, lens);
+  }
+
+  /**
+   * Same as {@link coerce(Class,Lens)}, but allows <code>null</code> values.
+   * If one of the arguments is <code>null</code>, the result is also <code>null</code>.
+   */
+  public static <M, T, X> Lens<M, T> coerceOrNull(Class<M> clazz, Lens<X, T> lens)
+  {
+    if ((clazz == null) || (lens == null))
+      return null;
+    return new Coerce<M, T, X>(clazz, lens);
+  }
+
+  /**
+   * The implementation of coercing a {@link Lens lens} to operate on a
+   * different class. During every operation the returned lens checks if the
+   * target object is a subclass of <var>X</var>. If it is, the operation
+   * is forwarded to the underlying lens. Otherwise a new {@link
+   * GetterNotReadableException} is thrown.
+   */
+  public static class Coerce<M, T, X>
+    extends WrappedLens<M, T, Getter<M, ?>>
+  {
+    private final Lens<X, T> second;
+
+    public Coerce(Getter<M, ?> first, Lens<X, T> lens)
+    {
+      super(first, lens.fieldClass());
+      this.second = lens;
     }
-    /**
-     * Same as {@link coerce(Class,Lens)}, but allows <code>null</code> values.
-     * If one of the arguments is <code>null</code>, the result is also <code>null</code>.
-     */
-    public static <M,T,X> Lens<M,T> coerceOrNull(Class<M> clazz, Lens<X,T> lens) {
-        if ((clazz == null) || (lens == null))
-            return null;
-        return new Coerce<M,T,X>(clazz, lens);
+
+    public Coerce(Class<M> clazz, Lens<X, T> lens)
+    {
+      this(new Identity<M>(clazz), lens);
     }
 
-    /**
-     * The implementation of coercing a {@link Lens lens} to operate on a
-     * different class. During every operation the returned lens checks if the
-     * target object is a subclass of <var>X</var>. If it is, the operation
-     * is forwarded to the underlying lens. Otherwise a new {@link
-     * GetterNotReadableException} is thrown.
-     */
-    public static class Coerce<M,T,X>
-            extends WrappedLens<M,T,Getter<M,?>>
-        {
-            private final Lens<X,T> second;
-            public Coerce(Getter<M,?> first, Lens<X,T> lens) {
-                super(first, lens.fieldClass());
-                this.second = lens;
-            }
-            public Coerce(Class<M> clazz, Lens<X,T> lens) {
-                this(new Identity<M>(clazz), lens);
-            }
+    private final X cast(Object target)
+    {
+      return second.recordClass().cast(target);
+    }
 
-            private final X cast(Object target) {
-                return second.recordClass().cast(target);
-            }
-            private final X castM(M target) {
-                try {
-                    return second.recordClass().cast(getter.get(target));
-                } catch (ClassCastException ex) {
-                    throw new GetterNotReadableException(ex);
-                }
-            }
-            @Override public T get(M target) {
-                return second.get(castM(target));
-            }
-            @Override public void set(M target, T value) {
-                second.set(castM(target), value);
-            }
+    private final X castM(M target)
+    {
+      try
+      {
+        return second.recordClass().cast(getter.get(target));
+      }
+      catch (ClassCastException ex)
+      {
+        throw new GetterNotReadableException(ex);
+      }
+    }
 
-            /**
-             * Returns <code>true</code> if its possible to read the target
-             * with this lens.
-             */
-            public boolean isReadable(M target) {
-                return second.recordClass().isInstance(getter.get(target));
-            }
-        }
+    @Override
+    public T get(M target)
+    {
+      return second.get(castM(target));
+    }
 
-
-    /**
-     * An <a href="https://en.wikipedia.org/wiki/Identity_function">identity</a>
-     * getter that returns the object passed to {@link Lenses.Identity#get get}.
-     */
-    public static final class Identity<R>
-            extends AbstractGetter<R,R>
-        {
-            public Identity(Class<R> recordClass) {
-                super(recordClass, recordClass);
-            }
-            public R get(R target) {
-                return target;
-            }
-        }
-
-    // -----------------------------------------------------------------
-
-    public static <R,F> Store<F> store(Lens<R,F> lens, R record) {
-        return new LensStore(lens, record);
+    @Override
+    public void set(M target, T value)
+    {
+      second.set(castM(target), value);
     }
 
     /**
-     * Implements the conversion from {@link Lens lenses} to
-     * {@link Store stores}.
+     * Returns <code>true</code> if its possible to read the target
+     * with this lens.
      */
-    public static class LensStore<R,F>
-            implements Store<F>
-        {
-            protected final R record;
-            protected final Lens<R,F> lens;
+    public boolean isReadable(M target)
+    {
+      return second.recordClass().isInstance(getter.get(target));
+    }
+  }
 
-            public LensStore(Lens<R,F> lens, R record) {
-                this.record = record;
-                this.lens = lens;
-            }
 
-            public F get() {
-                return lens.get(record);
-            }
-            public void set(F value) {
-                lens.set(record, value);
-            }
-        }
+  /**
+   * An <a href="https://en.wikipedia.org/wiki/Identity_function">identity</a>
+   * getter that returns the object passed to {@link Lenses.Identity#get get}.
+   */
+  public static final class Identity<R>
+    extends AbstractGetter<R, R>
+  {
+    public Identity(Class<R> recordClass)
+    {
+      super(recordClass, recordClass);
+    }
+
+    public R get(R target)
+    {
+      return target;
+    }
+  }
+
+  // -----------------------------------------------------------------
+
+  public static <R, F> Store<F> store(Lens<R, F> lens, R record)
+  {
+    return new LensStore(lens, record);
+  }
+
+  /**
+   * Implements the conversion from {@link Lens lenses} to
+   * {@link Store stores}.
+   */
+  public static class LensStore<R, F> implements Store<F>
+  {
+    protected final R record;
+    protected final Lens<R, F> lens;
+
+    public LensStore(Lens<R, F> lens, R record)
+    {
+      this.record = record;
+      this.lens = lens;
+    }
+
+    public F get()
+    {
+      return lens.get(record);
+    }
+
+    public void set(F value)
+    {
+      lens.set(record, value);
+    }
+  }
 }
