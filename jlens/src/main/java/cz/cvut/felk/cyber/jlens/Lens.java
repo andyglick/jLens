@@ -21,8 +21,7 @@ package cz.cvut.felk.cyber.jlens;
  * inside something of type <code>R</code>. This is the core interface of
  * jLens.
  */
-public interface Lens<R,F>
-    extends Getter<R,F>
+public interface Lens<R,F> extends Getter<R,F>
 {
     public void set(R record, F fieldValue);
 }

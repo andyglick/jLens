@@ -15,15 +15,12 @@
     You should have received a copy of the GNU Lesser General Public License
     along with jLens.  If not, see <http://www.gnu.org/licenses/>.
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+  http://maven.apache.org/maven-v4_0_0.xsd">
+
   <modelVersion>4.0.0</modelVersion>
-  <groupId>cz.cvut.felk.cyber.jlens</groupId>
-  <artifactId>processor</artifactId>
-  <packaging>jar</packaging>
-  <name>jLens Annotations Processor</name>
-  <version>1.0-SNAPSHOT</version>
-  <url></url>
 
   <parent>
     <groupId>cz.cvut.felk.cyber.jlens</groupId>
@@ -32,7 +29,23 @@
     <relativePath>..</relativePath>
   </parent>
 
+  <artifactId>processor</artifactId>
+  <packaging>jar</packaging>
+
+  <name>jLens Annotations Processor</name>
+  <version>1.0-SNAPSHOT</version>
+  <url></url>
+
   <dependencies>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+    </dependency>
+
     <dependency>
       <groupId>cz.cvut.felk.cyber.jlens</groupId>
       <artifactId>core</artifactId>
@@ -49,15 +62,6 @@
 
   <build>
     <plugins>
-      <!-- Options for javac. -->
-      <plugin>
-	<groupId>org.apache.maven.plugins</groupId>
-	<artifactId>maven-compiler-plugin</artifactId>
-        <version>2.3.2</version>
-	<configuration>
-          <proc>none</proc>
-	</configuration>
-      </plugin>
     </plugins>
   </build>
 </project>

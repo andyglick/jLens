@@ -15,11 +15,12 @@
     along with jLens.  If not, see <http://www.gnu.org/licenses/>.
  */
 package cz.cvut.felk.cyber.jlens.example;
- 
-import org.testng.annotations.*;
-import static org.testng.Assert.*;
 
-import static cz.cvut.felk.cyber.jlens.Lenses.*;
+import org.testng.annotations.Test;
+
+import static cz.cvut.felk.cyber.jlens.Lenses.join;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertSame;
  
 public class TestBasic {
     @Test

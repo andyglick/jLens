@@ -16,8 +16,6 @@
  */
 package cz.cvut.felk.cyber.jlens;
 
-import java.util.*;
-
 /**
  * A set of helper classes and methods for creating new lenses from existing
  * ones.
@@ -28,19 +26,17 @@ public final class Lenses
         throw new UnsupportedOperationException();
     }
 
-
     /**
      * Composes two getters (read-only lenses).
      * @see Lenses.JoinGetter
      */
-    public static <U,T,X> Getter<U,X> join(
-            Getter<U,T> first,
-            Getter<? super T,X> second)
+    public static <U,T,X> Getter<U,X> join(Getter<U,T> first, Getter<? super T,X> second)
     {
         if (first == null)
             throw new NullPointerException("First Getter is null");
         if (second == null)
             throw new NullPointerException("Second Getter is null");
+
         return new JoinGetter<U,T,X,Getter<? super T,X>>(first, second);
     }
     /**
@@ -221,6 +217,8 @@ public final class Lenses
             public Identity(Class<R> recordClass) {
                 super(recordClass, recordClass);
             }
+
+            @Override
             public R get(R target) {
                 return target;
             }
@@ -247,9 +245,12 @@ public final class Lenses
                 this.lens = lens;
             }
 
+            @Override
             public F get() {
                 return lens.get(record);
             }
+
+            @Override
             public void set(F value) {
                 lens.set(record, value);
             }
